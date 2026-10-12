@@ -56,8 +56,8 @@ class PaymentServiceImplTest {
     @Test
     @DisplayName("Chuyển tiền thành công: trừ ví người gửi, cộng ví người nhận")
     void transfer_success() {
-        when(walletRepository.findByUser_Username("alice")).thenReturn(Optional.of(aliceWallet));
-        when(walletRepository.findByUser_Username("bob")).thenReturn(Optional.of(bobWallet));
+        when(walletRepository.findIdByUsername("alice")).thenReturn(Optional.of(1L));
+        when(walletRepository.findIdByUsername("bob")).thenReturn(Optional.of(2L));
         when(walletRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(aliceWallet));
         when(walletRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(bobWallet));
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -77,8 +77,8 @@ class PaymentServiceImplTest {
     @DisplayName("Số dư không đủ: ném InsufficientBalanceException, không lưu giao dịch")
     void transfer_insufficientBalance() {
         aliceWallet.setBalance(new BigDecimal("100.00"));
-        when(walletRepository.findByUser_Username("alice")).thenReturn(Optional.of(aliceWallet));
-        when(walletRepository.findByUser_Username("bob")).thenReturn(Optional.of(bobWallet));
+        when(walletRepository.findIdByUsername("alice")).thenReturn(Optional.of(1L));
+        when(walletRepository.findIdByUsername("bob")).thenReturn(Optional.of(2L));
         when(walletRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(aliceWallet));
         when(walletRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(bobWallet));
 

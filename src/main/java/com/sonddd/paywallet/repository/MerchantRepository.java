@@ -13,6 +13,10 @@ public interface MerchantRepository extends JpaRepository<Merchant, Long> {
 
     Optional<Merchant> findByCode(String code);
 
+    /** Chỉ lấy id (không nạp entity) để sau đó đọc kèm khóa bằng {@link #findByIdForUpdate}. */
+    @Query("SELECT m.id FROM Merchant m WHERE m.code = :code")
+    Optional<Long> findIdByCode(@Param("code") String code);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT m FROM Merchant m WHERE m.id = :id")
     Optional<Merchant> findByIdForUpdate(@Param("id") Long id);

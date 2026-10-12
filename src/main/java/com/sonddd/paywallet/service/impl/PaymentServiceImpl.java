@@ -57,19 +57,21 @@ public class PaymentServiceImpl implements PaymentService {
             throw new BusinessException("Không thể chuyển tiền cho chính mình");
         }
 
-        Wallet senderRef = walletRepository.findByUser_Username(senderUsername)
+        // Chỉ lấy id, chưa đọc số dư: số dư phải được đọc SAU khi đã khóa.
+        Long senderId = walletRepository.findIdByUsername(senderUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy ví người gửi"));
-        Wallet receiverRef = walletRepository.findByUser_Username(request.toUsername())
+        Long receiverId = walletRepository.findIdByUsername(request.toUsername())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người nhận: " + request.toUsername()));
+        if (senderId.equals(receiverId)) {
+            throw new BusinessException("Không thể chuyển tiền cho chính mình");
+        }
 
-        // Khóa hai ví theo thứ tự id tăng dần để tránh deadlock khi 2 người chuyển chéo nhau.
-        Long lowId = Math.min(senderRef.getId(), receiverRef.getId());
-        Long highId = Math.max(senderRef.getId(), receiverRef.getId());
-        walletRepository.findByIdForUpdate(lowId).orElseThrow();
-        walletRepository.findByIdForUpdate(highId).orElseThrow();
-
-        Wallet sender = senderRef; // cùng instance trong persistence context, đã được khóa
-        Wallet receiver = receiverRef;
+        // Khóa (SELECT ... FOR UPDATE) hai ví theo thứ tự id tăng dần để tránh deadlock
+        // khi hai người chuyển chéo cho nhau. Giao dịch đến sau sẽ chờ ở đây, rồi đọc số dư mới nhất.
+        Wallet first = walletRepository.findByIdForUpdate(Math.min(senderId, receiverId)).orElseThrow();
+        Wallet second = walletRepository.findByIdForUpdate(Math.max(senderId, receiverId)).orElseThrow();
+        Wallet sender = first.getId().equals(senderId) ? first : second;
+        Wallet receiver = sender == first ? second : first;
 
         if (sender.getStatus() != WalletStatus.ACTIVE) {
             throw new BusinessException("Ví của bạn đang bị khóa");
@@ -114,18 +116,18 @@ public class PaymentServiceImpl implements PaymentService {
             return TransactionResponse.from(duplicate.get());
         }
 
-        Wallet walletRef = walletRepository.findByUser_Username(payerUsername)
+        Long walletId = walletRepository.findIdByUsername(payerUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy ví người thanh toán"));
-        Merchant merchantRef = merchantRepository.findByCode(request.merchantCode())
+        Long merchantId = merchantRepository.findIdByCode(request.merchantCode())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy merchant: " + request.merchantCode()));
 
-        if (!merchantRef.isActive()) {
+        // Khóa rồi mới đọc: luôn khóa ví trước, merchant sau (cùng một thứ tự -> không deadlock).
+        Wallet wallet = walletRepository.findByIdForUpdate(walletId).orElseThrow();
+        Merchant merchant = merchantRepository.findByIdForUpdate(merchantId).orElseThrow();
+
+        if (!merchant.isActive()) {
             throw new BusinessException("Merchant đang ngừng nhận thanh toán");
         }
-
-        // Khóa ví người trả và tài khoản merchant.
-        Wallet wallet = walletRepository.findByIdForUpdate(walletRef.getId()).orElseThrow();
-        Merchant merchant = merchantRepository.findByIdForUpdate(merchantRef.getId()).orElseThrow();
 
         if (wallet.getStatus() != WalletStatus.ACTIVE) {
             throw new BusinessException("Ví của bạn đang bị khóa");

@@ -53,11 +53,11 @@ public class WalletServiceImpl implements WalletService {
             }
         }
 
-        Wallet wallet = walletRepository.findByUser_Username(username)
+        Long walletId = walletRepository.findIdByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy ví của người dùng"));
 
-        // Khóa ghi để cập nhật số dư an toàn khi có truy cập đồng thời.
-        Wallet locked = walletRepository.findByIdForUpdate(wallet.getId())
+        // Khóa rồi mới đọc số dư, để cập nhật an toàn khi có truy cập đồng thời.
+        Wallet locked = walletRepository.findByIdForUpdate(walletId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy ví"));
 
         if (locked.getStatus() != WalletStatus.ACTIVE) {

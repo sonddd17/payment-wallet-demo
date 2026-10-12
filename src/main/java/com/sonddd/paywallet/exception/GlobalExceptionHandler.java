@@ -4,6 +4,9 @@ import com.sonddd.paywallet.dto.response.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -72,6 +75,23 @@ public class GlobalExceptionHandler {
                 fieldErrors
         );
         return ResponseEntity.badRequest().body(body);
+    }
+
+    /**
+     * Xung đột khi nhiều request cùng sửa một dữ liệu (hết thời gian chờ khóa, version thay đổi)
+     * -> 409, client có thể thử lại.
+     */
+    @ExceptionHandler({OptimisticLockingFailureException.class, PessimisticLockingFailureException.class})
+    public ResponseEntity<ErrorResponse> handleConcurrency(Exception ex, HttpServletRequest req) {
+        log.warn("Xung đột truy cập đồng thời tại {}: {}", req.getRequestURI(), ex.getMessage());
+        return build(HttpStatus.CONFLICT, "Dữ liệu đang được xử lý bởi yêu cầu khác, vui lòng thử lại", req);
+    }
+
+    /** Vi phạm ràng buộc CSDL (vd: trùng idempotency key khi gửi đồng thời) -> 409. */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex, HttpServletRequest req) {
+        log.warn("Vi phạm ràng buộc dữ liệu tại {}: {}", req.getRequestURI(), ex.getMostSpecificCause().getMessage());
+        return build(HttpStatus.CONFLICT, "Yêu cầu bị trùng hoặc vi phạm ràng buộc dữ liệu", req);
     }
 
     /** URL không tồn tại (không khớp controller/tài nguyên tĩnh) -> 404. */
