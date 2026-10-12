@@ -1,0 +1,38 @@
+# Chạy toàn bộ hệ thống (ứng dụng + PostgreSQL) chỉ với: docker compose up --build
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: paywallet-db
+    environment:
+      POSTGRES_DB: paywallet
+      POSTGRES_USER: paywallet
+      POSTGRES_PASSWORD: paywallet
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paywallet"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    container_name: paywallet-app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: postgres
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: paywallet
+      DB_USER: paywallet
+      DB_PASSWORD: paywallet
+      JWT_SECRET: paywallet-docker-secret-key-change-me-please-2026!!
+    ports:
+      - "8080:8080"
+
+volumes:
+  pgdata:

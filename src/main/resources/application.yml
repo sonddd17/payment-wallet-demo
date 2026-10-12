@@ -1,0 +1,66 @@
+spring:
+  application:
+    name: payment-wallet-demo
+
+  # ====== Cấu hình mặc định: H2 in-memory (chạy nhanh, không cần cài DB) ======
+  datasource:
+    url: jdbc:h2:mem:paywallet;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+
+  jpa:
+    hibernate:
+      ddl-auto: update          # Hibernate tự tạo/cập nhật bảng từ entity
+    open-in-view: false         # Thực hành tốt: không mở session ngoài tầng service
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  h2:
+    console:
+      enabled: true             # Xem CSDL tại http://localhost:8080/h2-console
+      path: /h2-console
+
+# ====== Cấu hình JWT ======
+app:
+  jwt:
+    # Khóa ký HS256 (>= 32 ký tự). Khi chạy thật nên đặt qua biến môi trường JWT_SECRET.
+    secret: ${JWT_SECRET:paywallet-demo-secret-key-please-change-in-production-2026!!}
+    expiration-seconds: 86400   # 24 giờ
+
+# ====== Swagger / OpenAPI ======
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+---
+# ====== Profile 'postgres': dùng khi chạy docker-compose hoặc có PostgreSQL ======
+spring:
+  config:
+    activate:
+      on-profile: postgres
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:paywallet}
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USER:paywallet}
+    password: ${DB_PASSWORD:paywallet}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+  h2:
+    console:
+      enabled: false

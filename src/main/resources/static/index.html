@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayWallet — Ví điện tử & Thanh toán (Demo)</title>
+    <style>
+        :root {
+            --bg: #0f172a; --card: #1e293b; --card2: #273449;
+            --accent: #22d3ee; --accent2: #818cf8;
+            --text: #e2e8f0; --muted: #94a3b8; --ok: #34d399; --err: #f87171;
+            --border: #334155;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            background: linear-gradient(160deg, #0f172a, #1e1b4b); color: var(--text);
+            min-height: 100vh; padding: 24px 16px;
+        }
+        .wrap { max-width: 1000px; margin: 0 auto; }
+        h1 { font-size: 26px; margin: 0 0 4px; }
+        h1 span { background: linear-gradient(90deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .sub { color: var(--muted); margin: 0 0 20px; font-size: 14px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+        .card { background: var(--card); border: 1px solid var(--border);
+            border-radius: 14px; padding: 18px; }
+        .card h2 { font-size: 15px; margin: 0 0 12px; letter-spacing: .3px; text-transform: uppercase; color: var(--muted); }
+        label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+        input, select {
+            width: 100%; padding: 10px 12px; border-radius: 9px;
+            border: 1px solid var(--border); background: var(--card2); color: var(--text); font-size: 14px;
+        }
+        button {
+            cursor: pointer; border: none; border-radius: 9px; padding: 10px 14px;
+            font-size: 14px; font-weight: 600; color: #04121a;
+            background: linear-gradient(90deg, var(--accent), var(--accent2)); margin-top: 12px;
+        }
+        button.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+        button:disabled { opacity: .5; cursor: not-allowed; }
+        .row { display: flex; gap: 8px; flex-wrap: wrap; }
+        .row button { flex: 1; }
+        .balance { font-size: 30px; font-weight: 700; color: var(--ok); margin: 6px 0; }
+        .pill { display: inline-block; font-size: 12px; padding: 2px 10px; border-radius: 999px;
+            background: var(--card2); color: var(--muted); border: 1px solid var(--border); }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+        th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border); }
+        th { color: var(--muted); font-weight: 600; }
+        .tag { font-size: 11px; padding: 1px 8px; border-radius: 6px; }
+        .TOPUP { background: #064e3b; color: #6ee7b7; }
+        .TRANSFER { background: #312e81; color: #a5b4fc; }
+        .PAYMENT { background: #4c1d95; color: #ddd6fe; }
+        #log { font-family: Consolas, monospace; font-size: 12px; white-space: pre-wrap;
+            background: #0b1120; border: 1px solid var(--border); border-radius: 9px;
+            padding: 12px; max-height: 180px; overflow: auto; color: var(--muted); }
+        .hidden { display: none; }
+        .links a { color: var(--accent); margin-right: 14px; font-size: 13px; }
+        .note { font-size: 12px; color: var(--muted); margin-top: 6px; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <h1><span>PayWallet</span> — Ví điện tử & Thanh toán</h1>
+    <p class="sub">Demo backend Java / Spring Boot · Dữ liệu mô phỏng, không phải tiền thật.
+        <span class="links">
+            <a href="/swagger-ui.html" target="_blank">Swagger API</a>
+            <a href="/h2-console" target="_blank">H2 Console</a>
+        </span>
+    </p>
+
+    <!-- ====== Khu đăng nhập ====== -->
+    <div id="authCard" class="card" style="margin-bottom:16px">
+        <h2>Đăng nhập / Đăng ký</h2>
+        <div class="grid">
+            <div>
+                <label>Tên đăng nhập</label>
+                <input id="username" value="alice">
+                <label>Mật khẩu</label>
+                <input id="password" type="password" value="alice123">
+                <div class="row">
+                    <button onclick="login()">Đăng nhập</button>
+                    <button class="ghost" onclick="register()">Đăng ký</button>
+                </div>
+            </div>
+            <div>
+                <label>Email (chỉ dùng khi đăng ký)</label>
+                <input id="email" placeholder="email@example.com">
+                <label>Họ tên (khi đăng ký)</label>
+                <input id="fullName" placeholder="Nguyễn Văn A">
+                <div class="row">
+                    <button class="ghost" onclick="fill('alice','alice123')">alice</button>
+                    <button class="ghost" onclick="fill('bob','bob123')">bob</button>
+                    <button class="ghost" onclick="fill('admin','admin123')">admin</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====== Khu sau khi đăng nhập ====== -->
+    <div id="app" class="hidden">
+        <div class="card" style="margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                    <h2 style="margin:0">Ví của <span id="who"></span> <span id="roleTag" class="pill"></span></h2>
+                    <div class="balance" id="balance">—</div>
+                    <span class="pill" id="walletStatus"></span>
+                </div>
+                <div style="text-align:right">
+                    <button class="ghost" onclick="loadWallet()">Làm mới số dư</button><br>
+                    <button class="ghost" onclick="logout()">Đăng xuất</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h2>Nạp tiền</h2>
+                <label>Số tiền</label>
+                <input id="topupAmount" type="number" value="100000">
+                <button onclick="topup()">Nạp vào ví</button>
+            </div>
+
+            <div class="card">
+                <h2>Chuyển tiền</h2>
+                <label>Người nhận (username)</label>
+                <input id="transferTo" value="bob">
+                <label>Số tiền</label>
+                <input id="transferAmount" type="number" value="50000">
+                <button onclick="transfer()">Chuyển</button>
+            </div>
+
+            <div class="card">
+                <h2>Thanh toán merchant</h2>
+                <label>Merchant</label>
+                <select id="merchantSelect"></select>
+                <label>Số tiền</label>
+                <input id="payAmount" type="number" value="35000">
+                <button onclick="pay()">Thanh toán</button>
+            </div>
+
+            <div class="card" id="adminCard">
+                <h2>Báo cáo (ADMIN)</h2>
+                <p class="note">Chỉ tài khoản admin xem được. Tổng hợp theo loại giao dịch.</p>
+                <button onclick="report()">Xem báo cáo</button>
+                <div id="reportBox" class="note"></div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+                <h2 style="margin:0">Lịch sử giao dịch</h2>
+                <button class="ghost" onclick="history()">Tải lịch sử</button>
+            </div>
+            <table>
+                <thead><tr><th>Mã</th><th>Loại</th><th>Số tiền</th><th>Từ</th><th>Đến</th><th>Mô tả</th></tr></thead>
+                <tbody id="historyBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+        <h2>Nhật ký phản hồi API</h2>
+        <div id="log">Sẵn sàng. Hãy đăng nhập bằng tài khoản demo (alice / alice123).</div>
+    </div>
+</div>
+
+<script>
+    let token = localStorage.getItem('pw_token') || null;
+    let currentUser = localStorage.getItem('pw_user') || null;
+    let currentRole = localStorage.getItem('pw_role') || null;
+
+    function log(obj, isErr) {
+        const el = document.getElementById('log');
+        const text = typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2);
+        el.textContent = text;
+        el.style.color = isErr ? 'var(--err)' : 'var(--muted)';
+    }
+
+    function fill(u, p) {
+        document.getElementById('username').value = u;
+        document.getElementById('password').value = p;
+    }
+
+    async function api(path, method = 'GET', body = null) {
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+        const res = await fetch(path, { method, headers, body: body ? JSON.stringify(body) : null });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { log(data, true); throw new Error(data.message || res.status); }
+        return data;
+    }
+
+    async function login() {
+        try {
+            const u = document.getElementById('username').value.trim();
+            const p = document.getElementById('password').value;
+            const res = await api('/api/auth/login', 'POST', { username: u, password: p });
+            token = res.data.accessToken; currentUser = res.data.username; currentRole = res.data.role;
+            localStorage.setItem('pw_token', token);
+            localStorage.setItem('pw_user', currentUser);
+            localStorage.setItem('pw_role', currentRole);
+            log(res);
+            showApp();
+        } catch (e) { /* đã log */ }
+    }
+
+    async function register() {
+        try {
+            const body = {
+                username: document.getElementById('username').value.trim(),
+                password: document.getElementById('password').value,
+                email: document.getElementById('email').value.trim(),
+                fullName: document.getElementById('fullName').value.trim()
+            };
+            const res = await api('/api/auth/register', 'POST', body);
+            log(res);
+            alert('Đăng ký thành công! Bây giờ hãy bấm Đăng nhập.');
+        } catch (e) { /* đã log */ }
+    }
+
+    function logout() {
+        token = currentUser = currentRole = null;
+        localStorage.clear();
+        document.getElementById('app').classList.add('hidden');
+        document.getElementById('authCard').classList.remove('hidden');
+        log('Đã đăng xuất.');
+    }
+
+    async function showApp() {
+        document.getElementById('authCard').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
+        document.getElementById('who').textContent = currentUser;
+        document.getElementById('roleTag').textContent = currentRole;
+        document.getElementById('adminCard').style.display = currentRole === 'ADMIN' ? 'block' : 'none';
+        await loadMerchants();
+        await loadWallet();
+        await history();
+    }
+
+    async function loadWallet() {
+        try {
+            const res = await api('/api/wallet/me');
+            document.getElementById('balance').textContent = formatVnd(res.data.balance) + ' ' + res.data.currency;
+            document.getElementById('walletStatus').textContent = 'Trạng thái: ' + res.data.status;
+            log(res);
+        } catch (e) {}
+    }
+
+    async function loadMerchants() {
+        try {
+            const res = await api('/api/merchants');
+            const sel = document.getElementById('merchantSelect');
+            sel.innerHTML = '';
+            res.data.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.code; opt.textContent = m.name + ' (' + m.code + ')';
+                sel.appendChild(opt);
+            });
+        } catch (e) {}
+    }
+
+    async function topup() {
+        try {
+            const amount = document.getElementById('topupAmount').value;
+            const res = await api('/api/wallet/topup', 'POST', { amount });
+            log(res); await loadWallet(); await history();
+        } catch (e) {}
+    }
+
+    async function transfer() {
+        try {
+            const res = await api('/api/payments/transfer', 'POST', {
+                toUsername: document.getElementById('transferTo').value.trim(),
+                amount: document.getElementById('transferAmount').value
+            });
+            log(res); await loadWallet(); await history();
+        } catch (e) {}
+    }
+
+    async function pay() {
+        try {
+            const res = await api('/api/payments/pay', 'POST', {
+                merchantCode: document.getElementById('merchantSelect').value,
+                amount: document.getElementById('payAmount').value
+            });
+            log(res); await loadWallet(); await history();
+        } catch (e) {}
+    }
+
+    async function history() {
+        try {
+            const res = await api('/api/payments/history?size=10');
+            const body = document.getElementById('historyBody');
+            body.innerHTML = '';
+            res.data.content.forEach(t => {
+                const tr = document.createElement('tr');
+                tr.innerHTML =
+                    '<td>' + t.reference + '</td>' +
+                    '<td><span class="tag ' + t.type + '">' + t.type + '</span></td>' +
+                    '<td>' + formatVnd(t.amount) + '</td>' +
+                    '<td>' + (t.fromUsername || '—') + '</td>' +
+                    '<td>' + (t.toUsername || t.merchantCode || '—') + '</td>' +
+                    '<td>' + (t.description || '') + '</td>';
+                body.appendChild(tr);
+            });
+        } catch (e) {}
+    }
+
+    async function report() {
+        try {
+            const res = await api('/api/admin/report');
+            const box = document.getElementById('reportBox');
+            box.innerHTML = res.data.map(r =>
+                r.type + ': ' + r.count + ' giao dịch, tổng ' + formatVnd(r.totalAmount)).join('<br>');
+            log(res);
+        } catch (e) {}
+    }
+
+    function formatVnd(v) {
+        return Number(v).toLocaleString('vi-VN');
+    }
+
+    // Tự động vào app nếu đã có token
+    if (token && currentUser) { showApp(); }
+</script>
+</body>
+</html>
