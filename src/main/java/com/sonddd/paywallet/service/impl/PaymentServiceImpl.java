@@ -15,10 +15,12 @@ import com.sonddd.paywallet.exception.InsufficientBalanceException;
 import com.sonddd.paywallet.exception.ResourceNotFoundException;
 import com.sonddd.paywallet.repository.MerchantRepository;
 import com.sonddd.paywallet.repository.TransactionRepository;
+import com.sonddd.paywallet.repository.TransactionSpecifications;
 import com.sonddd.paywallet.repository.WalletRepository;
 import com.sonddd.paywallet.service.PaymentService;
 import com.sonddd.paywallet.util.References;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -165,8 +167,15 @@ public class PaymentServiceImpl implements PaymentService {
         Wallet wallet = walletRepository.findByUser_Username(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy ví của người dùng"));
 
-        var page = transactionRepository.searchForWallet(
-                wallet.getId(), type, status, fromDate, toDate, pageable);
+        // Ghép điều kiện động: điều kiện nào null sẽ tự bị bỏ qua.
+        Specification<Transaction> spec = Specification
+                .where(TransactionSpecifications.involvesWallet(wallet.getId()))
+                .and(TransactionSpecifications.hasType(type))
+                .and(TransactionSpecifications.hasStatus(status))
+                .and(TransactionSpecifications.createdFrom(fromDate))
+                .and(TransactionSpecifications.createdTo(toDate));
+
+        var page = transactionRepository.findAll(spec, pageable);
         return PageResponse.of(page, TransactionResponse::from);
     }
 

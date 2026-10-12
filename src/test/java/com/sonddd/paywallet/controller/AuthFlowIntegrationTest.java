@@ -74,6 +74,29 @@ class AuthFlowIntegrationTest {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.balance").value(500000));
+
+        // 5) Lịch sử: không lọc, lọc theo loại, lọc theo khoảng thời gian
+        mockMvc.perform(get("/api/payments/history")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements").value(1));
+
+        mockMvc.perform(get("/api/payments/history").param("type", "TOPUP")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].type").value("TOPUP"));
+
+        mockMvc.perform(get("/api/payments/history").param("type", "PAYMENT")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements").value(0));
+
+        mockMvc.perform(get("/api/payments/history")
+                        .param("fromDate", "2020-01-01T00:00:00Z")
+                        .param("toDate", "2999-01-01T00:00:00Z")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements").value(1));
     }
 
     @Test

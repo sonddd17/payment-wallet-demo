@@ -2,6 +2,8 @@ package com.sonddd.paywallet.exception;
 
 import com.sonddd.paywallet.dto.response.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -22,6 +24,8 @@ import java.util.Map;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex, HttpServletRequest req) {
@@ -76,11 +80,16 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.NOT_FOUND, "Không tìm thấy đường dẫn: " + req.getRequestURI(), req);
     }
 
-    /** Lưới an toàn cuối cùng cho các lỗi chưa lường trước -> 500. */
+    /**
+     * Lưới an toàn cuối cùng cho các lỗi chưa lường trước -> 500.
+     * Chi tiết (SQL, stack trace) chỉ ghi vào log server, KHÔNG trả về client
+     * để tránh lộ thông tin nội bộ.
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpected(Exception ex, HttpServletRequest req) {
+        log.error("Lỗi không mong đợi tại {} {}", req.getMethod(), req.getRequestURI(), ex);
         return build(HttpStatus.INTERNAL_SERVER_ERROR,
-                "Đã có lỗi xảy ra: " + ex.getMessage(), req);
+                "Đã có lỗi hệ thống, vui lòng thử lại sau", req);
     }
 
     private ResponseEntity<ErrorResponse> build(HttpStatus status, String message, HttpServletRequest req) {
