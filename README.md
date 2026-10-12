@@ -131,6 +131,10 @@ mvn test
 - **Integration test** ([`AuthFlowIntegrationTest`](src/test/java/com/sonddd/paywallet/controller/AuthFlowIntegrationTest.java)):
   khởi động toàn bộ Spring Boot + H2, gọi API qua MockMvc — đăng ký → đăng nhập → nạp tiền → số dư → lịch sử
   với các bộ lọc; gọi API khi chưa đăng nhập bị từ chối.
+- **Test đồng thời** ([`ConcurrentTransferIntegrationTest`](src/test/java/com/sonddd/paywallet/service/ConcurrentTransferIntegrationTest.java)):
+  10 luồng cùng chuyển tiền từ một ví — tất cả phải thành công và số dư cuối phải đúng. Test này đã phát hiện
+  một lỗi thật: ví được đọc (không khóa) trước khi `SELECT … FOR UPDATE`, nên Hibernate trả về số dư cũ và
+  6/10 giao dịch hợp lệ bị từ chối. Cách sửa: lấy id trước, khóa rồi mới đọc.
 
 ## Cấu trúc thư mục
 
