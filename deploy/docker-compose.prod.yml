@@ -1,0 +1,44 @@
+# Triển khai production trên VPS. Bí mật (DB_PASSWORD, JWT_SECRET) đọc từ file .env
+# nằm cạnh file này trên server, KHÔNG commit lên Git.
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: paywallet-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: paywallet
+      POSTGRES_USER: paywallet
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paywallet"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build: .
+    container_name: paywallet-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: postgres
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: paywallet
+      DB_USER: paywallet
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      # Đứng sau Nginx: tin header X-Forwarded-* để sinh đúng URL https
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+      # Giới hạn heap cho VPS 1GB RAM
+      JAVA_OPTS: -Xms128m -Xmx384m -XX:+UseSerialGC
+    # Chỉ mở cho localhost; truy cập từ ngoài đi qua Nginx
+    ports:
+      - "127.0.0.1:8080:8080"
+
+volumes:
+  pgdata:

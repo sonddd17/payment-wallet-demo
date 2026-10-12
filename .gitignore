@@ -21,3 +21,7 @@ Thumbs.db
 # Môi trường
 *.env
 .env
+
+# Deploy: jar copy và file bí mật trên server
+deploy/*.jar
+deploy/.env
