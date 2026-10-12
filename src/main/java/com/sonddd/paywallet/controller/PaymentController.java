@@ -11,6 +11,7 @@ import com.sonddd.paywallet.service.PaymentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -54,6 +55,7 @@ public class PaymentController {
             @RequestParam(required = false) TransactionStatus status,
             @RequestParam(required = false) Instant fromDate,
             @RequestParam(required = false) Instant toDate,
+            @ParameterObject   // Swagger hiển thị page/size/sort thành các tham số riêng, không bắt buộc
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
         PageResponse<TransactionResponse> result = paymentService.history(

@@ -7,6 +7,7 @@ import com.sonddd.paywallet.dto.response.TransactionTypeStat;
 import com.sonddd.paywallet.service.AdminService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -32,6 +33,7 @@ public class AdminController {
     @Operation(summary = "Xem toàn bộ giao dịch của hệ thống (phân trang)")
     @GetMapping("/transactions")
     public ApiResponse<PageResponse<TransactionResponse>> allTransactions(
+            @ParameterObject
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return ApiResponse.ok(adminService.listAllTransactions(pageable));
     }

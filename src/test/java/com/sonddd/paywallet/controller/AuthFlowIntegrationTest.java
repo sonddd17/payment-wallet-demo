@@ -97,6 +97,11 @@ class AuthFlowIntegrationTest {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.totalElements").value(1));
+
+        // 6) Sắp xếp theo trường không tồn tại -> 400 (không phải 500)
+        mockMvc.perform(get("/api/payments/history").param("sort", "string")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

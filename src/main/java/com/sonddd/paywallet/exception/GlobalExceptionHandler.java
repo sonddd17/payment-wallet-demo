@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
@@ -92,6 +93,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex, HttpServletRequest req) {
         log.warn("Vi phạm ràng buộc dữ liệu tại {}: {}", req.getRequestURI(), ex.getMostSpecificCause().getMessage());
         return build(HttpStatus.CONFLICT, "Yêu cầu bị trùng hoặc vi phạm ràng buộc dữ liệu", req);
+    }
+
+    /** Sắp xếp theo trường không tồn tại (vd: ?sort=abc) -> 400 thay vì 500. */
+    @ExceptionHandler(PropertyReferenceException.class)
+    public ResponseEntity<ErrorResponse> handleBadSort(PropertyReferenceException ex, HttpServletRequest req) {
+        return build(HttpStatus.BAD_REQUEST,
+                "Trường sắp xếp không hợp lệ: '" + ex.getPropertyName() + "'. Ví dụ hợp lệ: sort=createdAt,desc", req);
     }
 
     /** URL không tồn tại (không khớp controller/tài nguyên tĩnh) -> 404. */
