@@ -6,6 +6,18 @@ cổng thanh toán thật — mục đích làm demo phỏng vấn vị trí Bac
 
 > ⚠️ Đây là dự án học tập/demo. Không dùng cho giao dịch tiền thật.
 
+## 🌐 Demo trực tuyến
+
+| | Link |
+|---|---|
+| Web demo | **https://sonddd.site** |
+| Tài liệu API (Swagger) | **https://sonddd.site/swagger-ui.html** |
+| Health check | https://sonddd.site/actuator/health |
+
+Đăng nhập bằng `alice / alice123` (USER) hoặc `admin / admin123` (ADMIN).
+
+Hạ tầng: VPS AlmaLinux 8 · Docker Compose (Spring Boot + PostgreSQL 16) · Nginx reverse proxy · Cloudflare (HTTPS).
+
 ## Công nghệ & kỹ năng thể hiện
 
 | Nhóm | Chi tiết |
@@ -44,6 +56,17 @@ Rồi mở: <http://localhost:8080> (giao diện demo) · <http://localhost:8080
 
 ```bash
 docker compose up --build
+```
+
+### Triển khai lên VPS (production)
+
+Cấu hình nằm trong thư mục [`deploy/`](deploy/): `Dockerfile` chạy jar đã build sẵn trên image JRE,
+`docker-compose.prod.yml` (app + PostgreSQL, app chỉ mở cho localhost) và cấu hình Nginx.
+Bí mật (`DB_PASSWORD`, `JWT_SECRET`) đặt trong file `deploy/.env` trên server, không commit.
+
+```bash
+# Trên server, trong /opt/paywallet/deploy (đã copy payment-wallet-demo.jar vào đây)
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 ## Các endpoint chính
